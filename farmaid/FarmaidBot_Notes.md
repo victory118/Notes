@@ -1,14 +1,49 @@
 ## Todos
 
----
-
 1. Broadcast the tag poses in the world frame in cam2tag_broadcaster.py.
    1. Find some way to load them using a .yaml file. You may have to manually find the quaternion rotation matrix based on the 3x3 rotation matrix which is easy to find. All ceiling tags will have the same relative rotation in the world frame.
 2. Broadcast 
 
-## Setting up the ROS environment
 
----
+
+## Hardware connections
+
+Digital Pins Usable for Interrupts: 2, 3, 18, 19, 20, 21
+
+| Arduino Mega             | Connection point                        |
+| ------------------------ | --------------------------------------- |
+| D2 (external interrupt)  | LS7184 #1 (from top): pin 8 (clock out) |
+| D22                      | LS7184 #1 (from top): pin 7 (direction) |
+| D3 (external interrupt)  | LS7184 #2 (from top): pin 8 (clock out) |
+| D23                      | LS7184 #2 (from top): pin 7 (direction) |
+| D18 (external interrupt) | LS7184 #3 (from top): pin 8 (clock out) |
+| D24                      | LS7184 #3 (from top): pin 7 (direction) |
+| D19 (external interrupt) | LS7184 #4 (from top): pin 8 (clock out) |
+| D25                      | LS7184 #4 (from top): pin 7 (direction) |
+| D4 (PWM)                 | Front left motor (direction)            |
+| D5 (PWM)                 | Front left motor (PWM)                  |
+| D6 (PWM)                 | Front right motor (direction)           |
+| D7 (PWM)                 | Front right motor (PWM)                 |
+| D8 (PWM)                 | Rear right motor (direction)            |
+| D9 (PWM)                 | Rear right motor (PWM)                  |
+| D10 (PWM)                | Rear left motor (direction)             |
+| D11 (PWM)                | Rear left motor (PWM)                   |
+
+| LS7184 Encoder Counter      | Connection point            |
+| --------------------------- | --------------------------- |
+| LS7184 #1 (from top): pin 4 | Front left wheel encoder A  |
+| LS7184 #1 (from top): pin 5 | Front left wheel encoder B  |
+| LS7184 #2 (from top): pin 4 | Front right wheel encoder A |
+| LS7184 #2 (from top): pin 5 | Front right wheel encoder B |
+| LS7184 #3 (from top): pin 4 | Rear right wheel encoder A  |
+| LS7184 #3 (from top): pin 5 | Rear right wheel encoder B  |
+| LS7184 #4 (from top): pin 4 | Rear left wheel encoder A   |
+| LS7184 #4 (from top): pin 5 | Rear left wheel encoder B   |
+|                             |                             |
+
+
+
+## Setting up the ROS environment
 
 Open a new terminal. If the Anaconda environment is activated, deactivate it by running `conda deactivate`.
 
@@ -22,8 +57,6 @@ $ source devel/setup.bash
 
 
 ## USB Camera and AprilTags
-
----
 
 Launch the USB camera node and AprilTag detection node by running:
 
@@ -39,15 +72,11 @@ To see the pose of the AprilTags detected with respect to the camera, open anoth
 
 ## Converting AprilTag measurements to robot coordinate frame
 
----
-
 The AprilTag detector node publishes pose information to the "topic_name" topic. This is the pose of the tag with respect to the camera coordinate frame. The ultimate goal is to get the pose of the tag in the robot coordinate frame.
 
 Before deriving the final results, I plan to study the RosInterface class that was provided by the Robotics Capstone course from Coursera in hopes of reusing as much of their code as possible. A brief description of their code is provided below.
 
 ## Publishing AprilTag static transform
-
----
 
 The AprilTags will have a fixed position and orientation in the world map. Thus, we will have to publish their pose information with respect to the world coordinate frame. One way to publish a static transform is through a launch file. Create a new launch file and use the code below as an example:
 
@@ -58,8 +87,6 @@ The AprilTags will have a fixed position and orientation in the world map. Thus,
 ```
 
 ## Making a tf broadcaster
-
----
 
 Create a new Python file called **cam2tag_broadcaster.py** and copy the code below.
 
@@ -177,7 +204,7 @@ You need to run the camera node before running the above launch files. You will 
 
 The transform from the **base_link** to **usb_cam** should be handled by the static_transform_publisher because there is no relative motion between these two frames so this transform is static. The pose of frame **usb_cam** in frame **base_link** is easy to obtain using a ruler and by inspection because the all of the coordinate axes in both frames are orthogonal.
 
-In the above launch file, the transform from **odom** to **base_link** transform is also statically published and the pose of **base_link** frame in **odom** frame is set to zero (i.e., the coordinate frames are exactly aligned). Hence, the pose of the **odom** and **base_link** frames in the **map** (or world) frame are equivalent and they only depend on the fiducial marker detections. The correct way to set this transform is to update it using encoder/IMU/gyro information in every time step. For example, assume in the previous time step that you have an estimate of the robot's pose (i.e., the pose of **base_link** frame in **odom** frame). In the current time step, you use measurements from the the encoder/IMU/gyro to calculate a new estimate of the robot pose and broadcast this transform as **odom** frame to **base_link** frame. In the same current time step, the robot's camera detects a fiducial marker which has a known pose in the **map** frame. Recall that the goal is to estimate the pose of **base_link** frame in the **map** frame, $^{\text{map}}T_{\text{base}}​$, and we know $^{\text{cam}}T_{\text{fid}}​$, $^{\text{odom}}T_{\text{base}}​$, $^{\text{base}}T_{\text{cam}}​$, and $^{\text{map}}T_{\text{fid}}​$. $^{\text{map}}T_{\text{base}}​$ can be solved by chaining together the known transforms as $^{\text{map}}T_{\text{base}} = ^{\text{map}}T_{\text{fid}} \cdot (^{\text{cam}}T_{\text{fid}})^{-1} \cdot (^{\text{base}}T_{\text{cam}})^{-1}​$. $^{\text{map}}T_{\text{odom}}​$ also gets updated as $^{\text{map}}T_{\text{odom}} = ^{\text{map}}T_{\text{base}} \cdot (^{\text{odom}}T_{\text{base}})^{-1}​$. The transform from **map** frame to **odom** frame provides an estimate of the accumulated error/drift in robot's pose that should be accounted for when estimating the pose of **base_link** frame in the **map** frame. Hence, the corrected pose of **base_link** in **map** frame can be obtained by $^{\text{map}}T_{\text{base}} = ^{\text{map}}T_{\text{odom}} \cdot ^{\text{odom}}T_{\text{base}}​$.
+In the above launch file, the transform from **odom** to **base_link** transform is also statically published and the pose of **base_link** frame in **odom** frame is set to zero (i.e., the coordinate frames are exactly aligned). Hence, the pose of the **odom** and **base_link** frames in the **map** (or world) frame are equivalent and they only depend on the fiducial marker detections. The correct way to set this transform is to update it using encoder/IMU/gyro information in every time step. For example, assume in the previous time step that you have an estimate of the robot's pose (i.e., the pose of **base_link** frame in **odom** frame). In the current time step, you use measurements from the the encoder/IMU/gyro to calculate a new estimate of the robot pose and broadcast this transform as **odom** frame to **base_link** frame. In the same current time step, the robot's camera detects a fiducial marker which has a known pose in the **map** frame. Recall that the goal is to estimate the pose of **base_link** frame in the **map** frame, $^{\text{map}}T_{\text{base}}$, and we know $^{\text{cam}}T_{\text{fid}}$, $^{\text{odom}}T_{\text{base}}$, $^{\text{base}}T_{\text{cam}}$, and $^{\text{map}}T_{\text{fid}}$. $^{\text{map}}T_{\text{base}}$ can be solved by chaining together the known transforms as $^{\text{map}}T_{\text{base}} = ^{\text{map}}T_{\text{fid}} \cdot (^{\text{cam}}T_{\text{fid}})^{-1} \cdot (^{\text{base}}T_{\text{cam}})^{-1}$. $^{\text{map}}T_{\text{odom}}$ also gets updated as $^{\text{map}}T_{\text{odom}} = ^{\text{map}}T_{\text{base}} \cdot (^{\text{odom}}T_{\text{base}})^{-1}$. The transform from **map** frame to **odom** frame provides an estimate of the accumulated error/drift in robot's pose that should be accounted for when estimating the pose of **base_link** frame in the **map** frame. Hence, the corrected pose of **base_link** in **map** frame can be obtained by $^{\text{map}}T_{\text{base}} = ^{\text{map}}T_{\text{odom}} \cdot ^{\text{odom}}T_{\text{base}}$.
 
 If we assume that the **odom** and **base_link** frames are the same and static relative to one another, i.e., we do not update the transform using odometry measurements, then we can simply use the estimated pose of **odom** or **base_link** as the pose in the **map** frame. Later, I will try fusing this pose estimate with odometry information using a Kalman filter to see if I can obtain a smoother final pose estimate. Here are some links describing the **base_link**, **odom**, and **map** frames in more detail:
 1. http://www.ros.org/reps/rep-0105.html.
@@ -216,6 +243,33 @@ Next open a new terminal on the Ubuntu laptop and run the `teleop_twist_keyboard
 ```
 $ rosrun teleop_twist_keyboard teleop_twist_keyboard.py
 ```
+
+Alternatively, use the turtlebot_teleop_key which might work better because it stops the robot when the keyboard is not pressed:
+```
+$ rosrun turtlebot_teleop turtlebot_teleop_key /turtlebot_teleop/cmd_vel:=/cmd_vel
+```
+
+### Running the fiducials SLAM package
+
+Open a terminal in the Ubuntu laptop and SSH into the RPi:
+```
+$ ssh victor@192.168.1.1.7
+```
+
+In the SSH RPi terminal, pull the latest changes of the farmaid_bot ROS package from GitHub:
+```
+$ git pull
+```
+Verify that you have exported the ROS_IP of the RPi and set the ROS_MASTER_URI to the IP address of the Ubuntu laptop.
+
+Plug the USB camera into the RPi and check the name of the device:
+```
+$ ls -ltrh /dev/video*
+```
+In my case the USB camera was named **/dev/video0**. Go to the camera_rect.launch file and make sure that the name of the device is set to the above name.
+
+Open a new terminal in the Ubuntu laptop a verify that you have exported the ROS_IP of the Ubuntu laptop. Then run `roscore`.
+
 
 ## Mount Raspbian image file in Ubuntu
 
