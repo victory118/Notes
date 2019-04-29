@@ -8,40 +8,48 @@
 
 ## Hardware connections
 
-Digital Pins Usable for Interrupts: 2, 3, 18, 19, 20, 21
+Digital Pins Usable for Interrupts: 2, 3, 18, 19, 20, 21 (attachInterrupt: 0, 1, 5, 4, 3, 2)
 
-| Arduino Mega             | Connection point                        |
-| ------------------------ | --------------------------------------- |
-| D2 (external interrupt)  | LS7184 #1 (from top): pin 8 (clock out) |
-| D22                      | LS7184 #1 (from top): pin 7 (direction) |
-| D3 (external interrupt)  | LS7184 #2 (from top): pin 8 (clock out) |
-| D23                      | LS7184 #2 (from top): pin 7 (direction) |
-| D18 (external interrupt) | LS7184 #3 (from top): pin 8 (clock out) |
-| D24                      | LS7184 #3 (from top): pin 7 (direction) |
-| D19 (external interrupt) | LS7184 #4 (from top): pin 8 (clock out) |
-| D25                      | LS7184 #4 (from top): pin 7 (direction) |
-| D4 (PWM)                 | Front left motor (direction)            |
-| D5 (PWM)                 | Front left motor (PWM)                  |
-| D6 (PWM)                 | Front right motor (direction)           |
-| D7 (PWM)                 | Front right motor (PWM)                 |
-| D8 (PWM)                 | Rear right motor (direction)            |
-| D9 (PWM)                 | Rear right motor (PWM)                  |
-| D10 (PWM)                | Rear left motor (direction)             |
-| D11 (PWM)                | Rear left motor (PWM)                   |
+| Arduino Mega             | Connection point                               |
+| ------------------------ | ---------------------------------------------- |
+| D19 (external interrupt) | LS7184 #3 (from top): pin 8 (clock out)/fleft  |
+| D23                      | LS7184 #3 (from top): pin 7 (direction)/fleft  |
+| D18 (external interrupt) | LS7184 #2 (from top): pin 8 (clock out)/fright |
+| D22                      | LS7184 #2 (from top): pin 7 (direction)/fright |
+| D2 (external interrupt)  | LS7184 #1 (from top): pin 8 (clock out)/rright |
+| D25                      | LS7184 #1 (from top): pin 7 (direction)/rright |
+| D3 (external interrupt)  | LS7184 #4 (from top): pin 8 (clock out)/rleft  |
+| D24                      | LS7184 #4 (from top): pin 7 (direction)/rleft  |
+| D4 (PWM)                 | Front left motor (direction)                   |
+| D5 (PWM)                 | Front left motor (PWM)                         |
+| D6 (PWM)                 | Front right motor (direction)                  |
+| D7 (PWM)                 | Front right motor (PWM)                        |
+| D8 (PWM)                 | Rear right motor (direction)                   |
+| D9 (PWM)                 | Rear right motor (PWM)                         |
+| D10 (PWM)                | Rear left motor (direction)                    |
+| D11 (PWM)                | Rear left motor (PWM)                          |
 
 | LS7184 Encoder Counter      | Connection point            |
 | --------------------------- | --------------------------- |
-| LS7184 #1 (from top): pin 4 | Front left wheel encoder A  |
-| LS7184 #1 (from top): pin 5 | Front left wheel encoder B  |
+| LS7184 #3 (from top): pin 4 | Front left wheel encoder A  |
+| LS7184 #3 (from top): pin 5 | Front left wheel encoder B  |
 | LS7184 #2 (from top): pin 4 | Front right wheel encoder A |
 | LS7184 #2 (from top): pin 5 | Front right wheel encoder B |
-| LS7184 #3 (from top): pin 4 | Rear right wheel encoder A  |
-| LS7184 #3 (from top): pin 5 | Rear right wheel encoder B  |
+| LS7184 #1 (from top): pin 4 | Rear right wheel encoder A  |
+| LS7184 #1 (from top): pin 5 | Rear right wheel encoder B  |
 | LS7184 #4 (from top): pin 4 | Rear left wheel encoder A   |
 | LS7184 #4 (from top): pin 5 | Rear left wheel encoder B   |
 |                             |                             |
 
+## Transferring files from laptop to RPi
 
+You are SSHed into the RPi from your laptop and your want to transfer some files from the laptop onto the RPi. To do this, navigate to the directory where the file or folder exists on the laptop and run the command:
+
+```
+$ scp -r farmaid_ros victor@192.168.1.11:/home/victor/sketchbook
+```
+
+Here, `farmaid_ros` is the entire directory to be copied from the laptop to the RPi. The argument `-r` is the recursive option to use when you want to copy an entire directory as opposed to just a single file. The directory on the RPi where you want to copy the file to is `/home/victor/sketchbook`.
 
 ## Setting up the ROS environment
 
@@ -248,6 +256,20 @@ Alternatively, use the turtlebot_teleop_key which might work better because it s
 ```
 $ rosrun turtlebot_teleop turtlebot_teleop_key /turtlebot_teleop/cmd_vel:=/cmd_vel
 ```
+
+If you are uploading code to the Arduino Mega instead of the Arduino Uno, you need to change to the correct setting in the Makefile. Go to the Makefile and change the line from:
+
+```
+BOARD_TAG = uno
+```
+
+to:
+
+```
+BOARD_TAG = mega2560
+```
+
+If the board is different from the Uno or Mega, you can see all supported boards by running in the command line `make show_boards`.
 
 ### Running the fiducials SLAM package
 
