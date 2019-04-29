@@ -1,6 +1,58 @@
-## Running ROS on Ubuntu laptop and Raspberry Pi
+## Publishing Transforms
 
----
+### static_transform_publisher
+
+The **static_transform_publisher** is a node that can be run using the command line as:
+
+```
+static_transform_publisher x y z yaw pitch roll frame_id child_frame_id period_in_ms
+```
+
+The command can also be launched using a launch file:
+
+```xml
+<launch>
+    <node pkg="tf" type="static_transform_publisher" name="name_of_node" 
+          args="x y z yaw pitch roll frame_id child_frame_id period_in_ms">
+    </node>
+</launch>
+```
+
+### Loading parameters from YAML file through the launch file
+
+If you want to define parameters of a node in a YAML file and then load it through the launch file, add the following line inside the **<node>** tag:
+
+```xml
+<rosparam file="$(find my_mapping_launcher)/params/gmapping_params.yaml" command="load" />
+```
+
+This will have the exact same result as if the parameters are loaded directly through the launch file.
+
+## Services
+
+### List all ROS services available
+
+```
+rosservice list
+```
+
+### Calling a service
+
+```
+rosservice call /service_name "argument"
+```
+
+Example:
+
+```
+rosservice call /static_map "{}"
+```
+
+This calls the **static_map** service with no arguments.
+
+
+
+## Running ROS on Ubuntu laptop and Raspberry Pi
 
 ### 1. Both Ubuntu laptop and RPi are connected to external Wifi access point
 
@@ -119,7 +171,45 @@ $ rostopic echo /cmd_vel
 
 ## Problems encountered and possible solutions
 
-___
+### There is no output on the terminal when I launch a node use a launch file.
+Within the `<node>` tag, make sure that you have the **output** argument set to **"screen"**. For example, the contents of the launch file below launches the **call_map_service** node from the **get_map_data** package from the **call_map_service.py** executable file:
+```xml
+<launch>
+    <node pkg="get_map_data"
+    type="call_map_service.py"
+    name="call_map_service"
+    output="screen">
+    </node>
+</launch>
+```
+
+### rospy.loginfo does not print anything to the terminal
+
+Make sure that the node is initialized before using rospy.loginfo. For example, see the code below:
+
+```python
+topic = 'chatter'
+    pub = rospy.Publisher(topic, String)
+    rospy.init_node('talker', anonymous=True)
+    rospy.loginfo("I will publish to the topic %s", topic)
+    while not rospy.is_shutdown():
+        str = "hello world %s"%rospy.get_time()
+        rospy.loginfo(str)
+        pub.publish(str)
+        rospy.sleep(0.1)
+```
+
+Reference: <http://wiki.ros.org/rospy_tutorials/Tutorials/Logging>
+
+### How to call rosservice in terminal with Empty service data type
+
+If you want to call a service from the terminal and the service uses the Empty service (srv) data type, then you can call it by running:
+
+``` 
+$ rosservice call /name_of_service arg1 arg2
+```
+
+Here, you should omit `arg1` and `arg2` (i.e., do not input any arguments) and submit the command after entering `/name_of_service`.
 
 ### Module not found error
 
