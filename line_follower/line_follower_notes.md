@@ -190,7 +190,7 @@ Open a new terminal and start the `teleop_twist_keyboard` ROS node:
 $ rosrun teleop_twist_keyboard teleop_twist_keyboard.py /cmd_vel:=/part2_cmr/cmd_vel
 ```
 
-By default, the teleop_twist_keyboard ROS node publishes Twist messages to a topic named `/cmd_vel`. The `/cmd_vel:=/part2_cmr/cmd_vel` argument tells rosrun to remap the `/cmd_vel` name to `/part2_cmr/cmd_vel`so now the published topic name is the same for both the publishing `teleop_twist_keyboard` ROS node and the subscribing `/part2_cmr` ROS node.
+By default, the teleop_twist_keyboard ROS node publishes Twist messages to a topic named `/cmd_vel`. The `/cmd_vel:=/part2_cmr/cmd_vel` argument tells rosrun to remap the `/cmd_vel` name to `/part2_cmr/cmd_vel` so now the published topic name is the same for both the publishing `teleop_twist_keyboard` ROS node and the subscribing `/part2_cmr` ROS node.
 
 Once you have the `teleop_twist_keyboard` ROS node running, let’s tune the linear and angular speed factors first. Hit the “x” button until you get to around speed 0.174 and hit the “e” key util you get turn 2.59.
 
