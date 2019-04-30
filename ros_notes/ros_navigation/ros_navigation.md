@@ -1301,7 +1301,7 @@ When rolling_window is set to true, make sure that static_map is set to false.
 
 ### Expected Result for Exercise 4.11
 
-![img](assets/global_costmap_rolling.png)
+![img](assets/ex4p11_global_costmap_rolling.png)
 
 ---
 
@@ -1779,4 +1779,421 @@ e) Modify the **width** and **height** parameters and put them to 5. Visualize t
 ![img](assets/ex5p7_local_costmap_5_2.png)
 
 ---
+
+As you've seen in the previous exercise, it's very important to set a correct width and height for your costmap. Depending on the environment you want to navigate, you will have set one value or another in order to properly visualize the obstacles.
+
+Just as we saw for the global costmap, layers can also be added to the local costmap. In the case of the local costmap, you will usually add these 2 layers:
+
+- **costmap_2d::ObstacleLayer**: Used for obstacle avoidance.
+- **costmap_2d::InflationLayer**: Used to inflate obstacles.
+
+So, you will end up with something like this:
+
+```python
+plugins:
+    - {name: obstacle_layer,      type: "costmap_2d::ObstacleLayer"}
+    - {name: inflation_layer,     type: "costmap_2d::InflationLayer"}
+```
+
+**VERY IMPORTANT:** Note that the **obstacle layer** uses different plugins for the **local costmap** and the **global costmap**. For the local costmap, it uses the **costmap_2d::ObstacleLayer**, and for the global costmap it uses the **costmap_2d::VoxelLayer**. This is very important because it is a common error in Navigation to use the wrong plugin for the obstacle layers.
+
+As you've already seen through the exercises, the local costmap keeps updating itself . These update cycles are made at a rate specified by the **update_frequency**parameter. Each cycle works as follows:
+
+- Sensor data comes in.
+- Marking and clearing operations are performed.
+- The appropriate cost values are assigned to each cell.
+- Obstacle inflation is performed on each cell with an obstacle. This consists of propagating cost values outwards from each occupied cell out to a specified inflation radius.
+
+## Exercise 5.8
+
+a) In the local costmap parameters file, change the **update_frequency** parameter of the map to be slower.
+
+b) Repeat Exercise 5.6 again, and see what happens now.
+
+I changed the update frequency to 1.0 Hz by adding this line to the my_local_costmap_params.yaml file:
+
+```
+update_frequency: 1.0
+```
+
+The update frequency of the local costmap can be verified by:
+
+```
+$ rosparam get /move_base/local_costmap/update_frequency
+1.0
+```
+
+After reducing the update frequency from the default 5.0 Hz to 1.0 Hz, the local costmap does not update as frequently as expected.
+
+### Expected Result for Exercise 5.8
+
+The object in the costmap is spawned with a little delay.
+
+---
+
+Now, you may be wondering... what are the marking and clearing operations you mentioned above?
+
+As you already know, the costmap automatically subscribes to the sensor topics and updates itself according to the data it receives from them. Each sensor is used to either **mark** (insert obstacle information into the costmap), **clear** (remove obstacle information from the costmap), or both.
+
+A **marking** operation is just an index into an array to change the cost of a cell.
+A **clearing** operation, however, consists of raytracing through a grid from the origin of the sensor outwards for each observation reported.
+
+The marking and clearing operations can be defined in the **obstacle layer**.
+
+At this point, we can almost say that you already know how to configure both global and local costmaps. But if you remember, there's still a paramters file we haven't talked about. That's the **common costmap parameters file**. These parameters will affect both the global and the local costmap.
+
+Basically, the parameters you'll have to set in this file are the following:
+
+- **footprint**: Footprint is the contour of the mobile base. In ROS, it is represented by a two-dimensional array of the form [x0, y0], [x1, y1], [x2, y2], ...]. This footprint will be used to compute the radius of inscribed circles and circumscribed circles, which are used to inflate obstacles in a way that fits this robot. Usually, for safety, we want to have the footprint be slightly larger than the robot’s real contour. 
+- **robot_radius**: In case the robot is circular, we will specify this parameter instead of the footprint. 
+- **layers parameters**: Here we will define the parameters for each layer.
+
+Each layer has its own parameters.
+
+### Obstacle Layer
+
+The obstacle layer is in charge of the **marking and clearing operations**.
+
+As you already know, the costmap automatically subscribes to the sensor topics and updates itself according to the data it receives from them. Each sensor is used to either mark (insert obstacle information into the costmap), clear (remove obstacle information from the costmap), or both.
+
+A marking operation is just an index into an array to change the cost of a cell.
+A clearing operation, however, consists of raytracing through a grid from the origin of the sensor outwards for each observation reported.
+
+The marking and clearing operations can be defined in the obstacle layer.
+
+- **max_obstacle_height (default: 2.0)**: The maximum height of any obstacle to be inserted into the costmap, in meters. This parameter should be set to be slightly higher than the height of your robot.
+- **obstacle range (default: 2.5)**: The default maximum distance from the robot at which an obstacle will be inserted into the cost map, in meters. This can be overridden on a per-sensor basis.
+- **raytrace_range (default: 3.0)**: The default range in meters at which to raytrace out obstacles from the map using sensor data. This can be overridden on a per-sensor basis.
+- **observation_sources (default: "")**: A list of observation source names separated by spaces. This defines each of the *source_name* namespaces defined below.
+
+Each source_name in observation_sources defines a namespace in which parameters can be set:
+
+- **/source_name/topic (default: source_name)**: The topic on which sensor data comes in for this source. Defaults to the name of the source.
+- **/source_name/data_type (default: "PointCloud")**: The data type associated with the topic, right now only "PointCloud," "PointCloud2," and "LaserScan" are supported.
+- **/source_name/clearing (default: false)**: Whether or not this observation should be used to clear out freespace.
+- **/source_name/marking (default: true)**: Whether or not this observation should be used to mark obstacles.
+- **/source_name/inf_is_valid (default: false)**: Allows for Inf values in "LaserScan" observation messages. The Inf values are converted to the laser's maximum range.
+
+**VERY IMPORTANT:** A very important thing to keep in mind is that the **obstacle layer** uses different plugins for the **local costmap** and the **global costmap**. For the local costmap, it uses the **costmap_2d::ObstacleLayer**, and for the global costmap it uses the **costmap_2d::VoxelLayer**. This is very important because it is a common error in Navigation to use the wrong plugin for the obstacle layers.
+
+## Exercise 5.9
+
+a) Add a file named **my_common_costmap_params.yaml** to the *params* directory of the package you created in Exercise 4.5.
+
+Make sure to edit the launch file **my_move_base_launch_2.launch**. Comment out the following two lines:
+
+```xml
+<rosparam file="$(find husky_navigation)/config/costmap_common.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find husky_navigation)/config/costmap_common.yaml" command="load" ns="local_costmap"/>
+```
+
+Add the following two lines:
+
+```xml
+<rosparam file="$(find my_move_base_launcher)/params/my_common_costmap_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find my_move_base_launcher)/params/my_common_costmap_params.yaml" command="load" ns="local_costmap"/>
+```
+
+b) Copy the contents of the **costmap_common.yaml** file of the *husky_navigation* package into this new file.
+
+**costmap_common.yaml** contains:
+
+```
+footprint: [[-0.5, -0.33], [-0.5, 0.33], [0.5, 0.33], [0.5, -0.33]]
+footprint_padding: 0.01
+
+robot_base_frame: base_link
+update_frequency: 4.0
+publish_frequency: 3.0
+transform_tolerance: 0.5
+
+resolution: 0.05
+
+obstacle_range: 5.5
+raytrace_range: 6.0
+
+#layer definitions
+static:
+    map_topic: /map
+    subscribe_to_updates: true
+
+obstacles_laser:
+    observation_sources: laser
+    laser: {data_type: LaserScan, clearing: true, marking: true, topic: scan, inf_is_valid: true}
+
+inflation:
+    inflation_radius: 1.0
+```
+
+c) Now, modify the **obstacle_range** parameter and set it to 1.
+
+d) Move the robot close to an obstacle and see what happens.
+
+### Expected Result for Exercise 5.9
+
+![img](assets/ex5p9_obstacle_range_1.png)
+
+---
+
+#### Inflation Layer
+
+The inflation layer is in charge of performing inflation in each cell with an obstacle.
+
+- **inflation_radius (default: 0.55)**: The radius in meters to which the map inflates obstacle cost values.
+- **cost_scaling_factor (default: 10.0)**: A scaling factor to apply to cost values during inflation.
+
+## Exercise 5.10
+
+a) Now, modify the **inflation_radius** parameter of the costmap to be slower.
+
+b) Move close to an object and check the difference.
+
+### Expected Result for Exercise 5.10
+
+Low inflation:
+
+![img](assets/ex5p10_inflation_low.png)
+
+High inflation:
+
+![img](assets/ex5p10_inflation_high.png)
+
+---
+
+#### Static Layer
+
+The static layer is in charge of providing the static map to the costmaps that require it (global costmap).
+
+- **map_topic (string, default: "map")**: The topic that the costmap subscribes to for the static map.
+
+## Recovery Behaviors
+
+It could happen that while trying to perform a trajectory, the robot gets stuck for some reason. Fortunately, if this happens, the ROS Navigation Stack provides methods that can help your robot to get unstuck and continue navigating. These are the **recovery behaviors**.
+
+The ROS Navigation Stack provides 2 recovery behaviors: **clear costmap** and **rotate recovery**.
+
+In order to enable the recovery behaviors, we need to set the following parameter in the move_base parameters file:
+
+- **recovery_behavior_enabled (default: true)**: Enables or disables the recovery behaviors.
+
+### Rotate Recovery
+
+Bascially, the rotate recovery behavior is a simple recovery behavior that attempts to clear out space by rotating the robot 360 degrees. This way, the robot may be able to find an obstacle-free path to continue navigating.
+
+It has some parameters that you can customize in order to change or improve its behavior:
+
+### Rotate Recovery Parameters
+
+- **/sim_granularity (double, default: 0.017)**: The distance, in radians, between checks for obstacles when checking if an in-place rotation is safe. Defaults to 1 degree.
+- **/frequency (double, default: 20.0)**: The frequency, in HZ, at which to send velocity commands to the mobile base.
+
+### Other Parameters
+
+IMPORTANT: These parameters are already set when using the base_local_planner local planner; they only need to be set explicitly for the recovery behavior if a different local planner is used.**
+
+- **/yaw_goal_tolerance (double, default: 0.05)**: The tolerance, in radians, for the controller in yaw/rotation when achieving its goal
+- **/acc_lim_th (double, default: 3.2)**: The rotational acceleration limit of the robot, in radians/sec^2
+- **/max_rotational_vel (double, default: 1.0)**: The maximum rotational velocity allowed for the base, in radians/sec
+- **/min_in_place_rotational_vel (double, default: 0.4)**: The minimum rotational velocity allowed for the base while performing in-place rotations, in radians/sec
+
+These parameters are set in the move_base parameters file.
+
+## Exercise 5.11
+
+Force the robot to move to an obstacle and check if the Rotate Recovery behavior launches. 
+
+---
+
+### Clear Costmap
+
+The clear costmap recovery is a simple recovery behavior that clears out space by clearing obstacles outside of a specified region from the robot's map. Basically, the local costmap reverts to the same state as the global costmap.
+
+The move_base node also provides a service in order to clear out obstacles from a costmap. This service is called **/move_base/clear_costmaps**.
+
+Bear in mind that by clearing obstacles from a costmap, you will make these obstacles invisible to the robot. So, be careful when calling this service since it could cause the robot to start hitting obstacles.
+
+## Exercise 5.12
+
+a) If there's not one yet, add an object to the scene that doesn't appear in the global costmap. For instance, the object in [Exercise 5.6](https://i-020023c2451ceb591.robotigniteacademy.com/jupyter/notebooks/Path_Planning_2.ipynb#ex-5-6).
+
+Recall that to add the obstacle:
+
+```
+rosrun gazebo_ros spawn_model -file /home/user/catkin_ws/src/object.urdf -urdf -x 0 -y 0 -z 1 -model my_object
+```
+
+b) Move the robot so that it detects this new obstacle in the local costmap.
+
+Use teleop:
+
+```
+roslaunch husky_launch keyboard_teleop.launch
+```
+
+c) Turn the robot so that it doesn't see anymore the obstacle (the laser beams don't detect it).
+
+d) Perform a call to the **/clear_costmaps** service through the WebShell, and check what happens.
+
+```
+rosservice call /move_base/clear_costmaps "{}"
+```
+
+### Expected Result for Exercise 5.12
+
+Object detected by the laser and placed into the local Ccostmap:
+
+![img](assets/ex5p12_nav_object_detected1.png)
+
+Husky turns and laser doesn't detect the object anymore, but it still appears in the local costmap.
+
+![img](assets/nav_object_detected2.png)
+
+After calling the **/move_base/clear_costmaps** service, the object is cleared from the local costmap:
+
+![img](assets/ex5p12_nav_object_cleared.png)
+
+---
+
+## Oscillation Supression
+
+Oscillation occurs when, in any of the x, y, or theta dimensions, positive and negative values are chosen consecutively.
+
+To prevent oscillations, when the robot moves in any direction, the opposite direction is marked invalid for the next cycle, until the robot has moved beyond a certain distance from the position where the flag was set.
+
+In order to manage this issue, 2 parameters exist that you can set in the move_base parameters file.
+
+- **oscillation_timeout (double, default: 0.0)**: How long, in seconds, to allow for oscillation before executing recovery behaviors. A value of 0.0 corresponds to an infinite timeout.
+- **oscillation_distance (double, default: 0.5)**: How far, in meters, the robot must move to not be considered oscillating. Moving this far resets the timer counting up to the ~oscillation_timeout
+
+## Recap
+
+Congratulations! At this point, you've already seen almost all of the important parts that this chapter covers. And since this is the last chapter of the course, this means that you are very close to knowing how to deal with ROS Navigation in its entirety!
+
+Anyways, you may be overwhelmed with all of the information that you've received about Path Planning. That's why I think this is a good moment to do a summary of all that you've seen in this chapter up until now. Let's begin!
+
+### The move_base node
+
+The move_base node is, basically, the node that coordinates all of the Path Planning System. It takes a goal pose as input, and outputs the necessary velocity commands in order to move the robot from an initial pose to the specified goal pose. In order to achieve this, the move_base node manages a whole internal process where it take place for different parts:
+
+- global planner
+- local planner
+- costmaps
+- recovery behaviors
+
+### The global planner
+
+When a new goal is received by the move_base node, it is immediately sent to the global planner. The global planner, then, will calculate a safe path for the robot to use to arrive to the specified goal. The global planner uses the global costmap data in order to calculate this path.
+
+There are different types of global planners. Depending on your setup, you will use one or another.
+
+### The local planner
+
+Once the global planner has calculated a path for the robot, this is sent to the local planner. The local planner, then, will execute this path, breaking it into smaller (local) parts. So, given a plan to follow and a map, the local planner will provide velocity commands in order to move the robot. The local planner operates over a local costmap.
+
+There are different types of local planners. Depending on the kind of performance you require, you will use one or another.
+
+### Costmaps
+
+Costmaps are, basically, maps that represent which points of the map are safe for the robot to be in, and which ones are not. There are 2 types of costmaps:
+
+- global costmap
+- local costmap
+
+Basically, the difference between them is that the global costmap is built using the data from a previously built static map, while the local costmap is built from the robot's sensor readings.
+
+### Recovery Behaviors
+
+The recovery behaviors provide methods for the robot in case it gets stuck. The Navigation Stack provides 2 different recovery behaviors:
+
+- rotate recovery
+- clear costmap
+
+### Configuration
+
+Since there are lots of different nodes working together, the number of parameters available to configure the different nodes is also very high. I think it would be a great idea if we summarize the different parameter files that we will need to set for Path Planning. The parameter files you'll need are the following:
+
+- **move_base_params.yaml**
+- **global_planner_params.yaml**
+- **local_planner_params.yamls**
+- **common_costmap_params.yaml**
+- **global_costmap_params.yaml**
+- **local_costmap_params.yaml**
+
+Besides the parameter files shown above, we will also need to have a launch file in order to launch the whole system and load the different parameters.
+
+### Overall
+
+Summarizing, this is how the whole path planning method goes:
+
+After getting the current position of the robot, we can send a goal position to the **move_base** node. This node will then send this goal position to a **global planner** which will plan a path from the current robot position to the goal position. This plan is in respect to the **global costmap**, which is feeding from the **map server**.
+
+The **global planner** will then send this path to the **local planner**, which executes each segment of the global plan. The **local planner** gets the odometry and the laser data values and finds a collision-free local plan for the robot. The **local planner** is associated with the **local costmap**, which can monitor the obstacle(s) around the robot. The **local planner** generates the velocity commands and sends them to the base controller. The robot base controller will then convert these commands into real robot movement.
+
+If the robot is stuck somewhere, the recovery behavior nodes, such as the **clear costmap recovery** or **rotate recovery**, will be called.
+
+Now everything makes more sense, right?
+
+## Dynamic Reconfigure
+
+Until now, we've seen how to change parameters by modifying them in the parameters files. But, guess what... this is not the only way that you can change parameters! You can also change dynamic parameters by using the rqt_reconfigure tool. Follow the next steps:
+
+## Exercise 5.14
+
+a) Run the next command in order to open the rqt_reconfigure tool.
+
+```
+rosrun rqt_reconfigure rqt_reconfigure
+```
+
+- Open the move_base group.
+
+- Select the DWAPlannerROS node.
+
+- Play a little bit with the following 3 parameters:
+  - **path_distance_bias**
+  - **goal_distance_bias**
+  - **occdist_scale**
+
+- The above parameters are the ones involved in calculating the cost function, which is used to score each trajectory. More in detail, they define the following:
+  - **path_distance_bias**: The weighting for how much the controller should stay close to the path it was given.
+  - **goal_distance_bias**: The weighting for how much the controller should attempt to reach its local goal, also controls speed.
+  - **occdist_scale**: The weighting for how much the controller should attempt to avoid obstacles.
+
+- Open Rviz and visualize how the global and local plans change depending on the values set.
+
+### Expected Result for Exercise 5.14
+
+![img](assets/ex5p14_rqt_reconfigure.png)
+
+## Other Useful Visualizations in Rviz
+
+Until now, we've seen some ways of visualizing different parts of the move_base node process through Rviz. But, there are a couple more that may be interesting to know:
+
+### Robot Footprint
+
+It shows the footprint of the robot.
+
+![img](assets/footprint.png)
+
+### Current Goal
+
+To show the goal pose that the navigation stack is attempting to achieve, add a Pose Display and set its topic to /move_base_simple/goal. You will now be able to see the goal pose as a red arrow. It can be used to learn the final position of the robot.
+
+![img](assets/current_goal_clean.png)
+
+## Exercise 5.15
+
+Open Rviz and try to visualize the elements described above. 
+
+### Expected Result for Exercise 5.15
+
+Images similar to those shown above in RViz.
+
+---
+
+## CONCLUSIONS
+
+![img](assets/overview_tf_small.png)
+
+Summarizing, the ROS Path Planning system is basically managed by the move_base node.
 
