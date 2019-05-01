@@ -15,7 +15,7 @@ We're arriving at the end of the course, guys! For now, we've seen how to create
 
 In this chapter, you'll learn how the Path Planning process works in ROS, and all of the elements that take place in it. But first, as we've been doing in previous chapters, let's have a look at our digital best friend, RViz.
 
-### Visualize Path Planning in Rviz
+## Visualize Path Planning in Rviz
 
 As you've already seen in previous chapters, you can also launch RViz and add displays in order to watch the Path Planning process of the robot. For this chapter, you'll basically need to use 3 elements of RViz:
 
@@ -23,11 +23,11 @@ As you've already seen in previous chapters, you can also launch RViz and add di
 - Path Displays (Plans)
 - 2D Tools
 
-## Exercise 4.1
+### Exercise 4.1
 
 a) Execute the next command in order to launch the move_base node.
 
-Execute in WebShell #1:
+**Execute in WebShell #1:**
 
 ```
 roslaunch husky_navigation move_base_demo.launch
@@ -35,7 +35,7 @@ roslaunch husky_navigation move_base_demo.launch
 
 b) Open the Graphic Interface and execute the following command in order to start RViz.
 
-Execute in WebShell #2:
+**Execute in WebShell #2:**
 
 ```
 rosrun rviz rviz
@@ -43,7 +43,7 @@ rosrun rviz rviz
 
 c) Properly congifure RViz in order to visualize the necessary parts.
 
-### Visualize Costmaps
+#### Visualize Costmaps
 
 - Click the Add button under Displays and chose the Map element.
 - Set the topic to **/move_base/global_costmap/costmap**in order to visualize the global costmap
@@ -54,7 +54,7 @@ c) Properly congifure RViz in order to visualize the necessary parts.
 
 > The local_costmap displays the free and occupied space around the robot based on the current laser sensor readings.
 
-### Visualize Plans
+#### Visualize Plans
 
 - Click the Add button under Displays and chose the Path element.
 - Set the topic to **/move_base/NavfnROS/plan** in order to visualize the global plan.
@@ -65,13 +65,13 @@ c) Properly congifure RViz in order to visualize the necessary parts.
 
 d) Use the 2D Pose Estimate tool in order to provide an initial pose for the robot. 
 
-![img](assets/ch4_2d_pose_estimate_rviz.png)
+![](assets/planning1_ex4p1_2d_pose_estimate_rviz.png)
 
 e) Use the 2D Nav Goal tool in order to send a goal pose to the robot. Make sure to select an unoccupied (dark grey) or unexpected (light grey) location. 
 
-![img](assets/ch4_2d_nav_goal_rviz.png)
+![img](assets/planning1_ex4p1_2d_nav_goal_rviz.png)
 
-### Data for Exercise 4.1
+#### Data for Exercise 4.1
 
 Check the following notes in order to complete the exercise:
 
@@ -79,7 +79,7 @@ Check the following notes in order to complete the exercise:
 
 **Note 2**: In order for the 2D tools to work, the Fixed Frame at Rviz must be set to map.
 
-### Expected Result for Exercise 4.1
+#### Expected Result for Exercise 4.1
 
 Global Costmap:
 
@@ -103,7 +103,7 @@ That's awesome, right? But what has just happened? What was that 2D Nav Goal too
 
 Keep calm!! By the end of this chapter, you'll be able to answer all of those questions. But let's go step by step, so that you can completely understand how the whole process works.
 
-### The move_base package
+## The move_base package
 
 The move_base package contains the **move_base node**. Doesn't that sound familiar? Well, it should, since you were introduced to it in the Basic Concepts chapter! The move_base node is one of the major elements in the ROS Navigation Stack, since it links all of the elements that take place in the Navigation process. Let's say it's like the Architect in Matrix, or the Force in Star Wars. Without this node, the ROS Navigation Stack wouldn't make any sense!
 
