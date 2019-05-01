@@ -1,160 +1,3 @@
-## Exercise 3.12
-
-a) Inside the package that you created in the exercise above, create a new file named **square_move.py**.
-
-b) Inside this file, write the code to move the robot. The robot must perform a square movement. When it finishes, it has to print the covariance of the filter particles into the screen.
-
-c) Test that your code works (the robot moves in a square).
-
-d) When you've tested that it works, add the necessary code so that your program does the following:
-
-1. First of all, it calls the necessary service in order to disperse the particles all around the environment.
-2. When the particles are randomly dispersed, it performs the square movement.
-3. When it has finished doing the movement, it checks the particles' covariance.
-4. If this covariance is less than 0.65, this means that the robot has localized itself correctly. Then, the program will end. If this covariance is greater than 0.65, it will repeat the whole the process (disperse the particles, perform the movement, check the covariance...).
-
-### *Provided Solution
-
-```python
-#!/usr/bin/env python
-import rospy
-from geometry_msgs.msg import Twist, PoseWithCovarianceStamped
-from std_srvs.srv import Empty, EmptyRequest
-import time
-import math
-
-class MoveHusky():
-    
-    def __init__(self):
-        
-        # Init Publisher
-        self.husky_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=1)
-        self.cmd = Twist()
-        # Init Subscriber
-        self.amcl_pose_sub = rospy.Subscriber('/amcl_pose', PoseWithCovarianceStamped, self.sub_callback)
-        self.sub_msg = PoseWithCovarianceStamped()
-        # Initialize Service Client
-        rospy.wait_for_service('/global_localization')
-        self.disperse_particles_service = rospy.ServiceProxy('/global_localization', Empty)
-        self.srv_request = EmptyRequest()
-        # Other stuff
-        self.ctrl_c = False
-        rospy.on_shutdown(self.shutdownhook)
-        self.rate = rospy.Rate(10)
-        
-    def shutdownhook(self):
-        
-        # works better than the rospy.is_shut_down()
-        self.stop_husky()
-        self.ctrl_c = True
-
-    def stop_husky(self):
-        
-        rospy.loginfo("Shutdown time! Stop the robot")
-        self.cmd.linear.x = 0.0
-        self.cmd.angular.z = 0.0
-        i = 0
-        
-        while i < 20:
-            self.husky_vel_publisher.publish(self.cmd)
-            self.rate.sleep()
-            i += 1
-
-    def move_forward(self, linear_speed=0.5, angular_speed=0.0):
-        
-        self.cmd.linear.x = linear_speed
-        self.cmd.angular.z = angular_speed
-        i = 0
-        
-        while i < 50:
-            self.husky_vel_publisher.publish(self.cmd)
-            self.rate.sleep()
-            i += 1
-        
-    def turn(self, linear_speed=0.0, angular_speed=0.8):
-        
-        self.cmd.linear.x = linear_speed
-        self.cmd.angular.z = angular_speed
-        i = 0
-        
-        while i < 25:
-            self.husky_vel_publisher.publish(self.cmd)
-            self.rate.sleep()
-            i += 1
-    
-    def move_square(self):
-        
-        i = 0
-        
-        while not self.ctrl_c and i < 4:
-            # Move Forwards
-            rospy.loginfo("######## Going Forwards...")
-            self.move_forward()
-            self.stop_husky()
-            # Turn
-            rospy.loginfo("######## Turning...")
-            self.turn()
-            self.stop_husky()
-            i += 1
-            
-        self.stop_husky()
-        rospy.loginfo("######## Finished Moving in a Square")
-        
-    def call_service(self):
-        
-        rospy.loginfo("######## Calling Service...")
-        result = self.disperse_particles_service(self.srv_request)
-        
-    def sub_callback(self, msg):
-        
-        self.sub_msg = msg
-
-    def calculate_covariance(self):
-        
-        rospy.loginfo("######## Calculating Covariance...")
-        cov_x = self.sub_msg.pose.covariance[0]
-        cov_y = self.sub_msg.pose.covariance[7]
-        cov_z = self.sub_msg.pose.covariance[35]
-        rospy.loginfo("## Cov X: " + str(cov_x) + " ## Cov Y: " + str(cov_y) + " ## Cov Z: " + str(cov_z))
-        cov = (cov_x+cov_y+cov_z)/3
-        
-        return cov
-        
-            
-if __name__ == '__main__':
-    rospy.init_node('move_husky_node', anonymous=True)
-    MoveHusky_object = MoveHusky()
-    
-    cov = 1
-    
-    while cov > 0.65:
-        MoveHusky_object.call_service()
-        MoveHusky_object.move_square()
-        cov = MoveHusky_object.calculate_covariance()
-        rospy.loginfo("######## Total Covariance: " + str(cov))
-        if cov > 0.65:
-            rospy.loginfo("######## Total Covariance is greater than 0.65. Repeating the process...")
-        else:
-            rospy.loginfo("######## Total Covariance is lower than 0.65. Robot correctly localized!")
-            rospy.loginfo("######## Exiting...")
-```
-
-
-
-### Data for Exercise 3.12
-
-Check the following notes in order to complete the exercise: 
-
-Note 1: Keep in mind that in order to be able to call this service, you need to have the amcl node running.
-Note 2: The particles covariance is published into the /amcl_pose topic.
-Note 3: The particles covariance is published into a matrix. This matrix looks like this:
-
-![img](assets/ex3p12_particle_covariance.png)
-
-The only values that you need to pay attention to is the first one (which is the covariance in x), the 8th one (which is the covariance in y), and the last one (which is the covariance in z).
-
-> The open loop controller running in square_move.py will not work correctly if teleop mode is running in another terminal. The robot will be moving extremely slowly. Specifically, I had `roslaunch husky_navigation_launch keyboard_teleop.launch` running in another terminal. Make sure this is not currently running in another terminal!
-
 # Chapter 4: Path Planning Part 1
 
 ## Summary
@@ -2196,4 +2039,196 @@ Images similar to those shown above in RViz.
 ![img](assets/overview_tf_small.png)
 
 Summarizing, the ROS Path Planning system is basically managed by the move_base node.
+
+# Course Project
+
+![img](assets/project1nav_summitxl.png)
+
+## Summary
+
+Estimated time to completion: **1'5 hours**
+
+What will you learn with this unit?
+
+- Practice everything you've learned through the course
+- Put together everything that you learned into a big project
+- Create a launch file that launches each part of the Navigation Stack
+
+---
+
+## Navigate the Summit Robot!
+
+In this project, you will have to make a [Summit robot](http://www.robotnik.eu/mobile-robots/summit-xl/) navigate around a room autonomously.
+
+For this goal, you will have to apply all of the things that you are learning along the course. It's really important that you complete it because all of the structures that you create for this project will be asked about in our **official exam**. 
+
+**Note: Our offical exam is only available, at present, for on-site or virtual classes.**
+
+Basically, in this project, you will have to:
+
+- Apply all of the theory given in the course
+- Follow the steps provided below without looking at the provided solutions (unless you get really stuck)
+- Make as many tests as required in the simulation environment until it works
+
+To finish this project successfully, we provide the 5 steps you should follow with clear instructions, and even solutions, below.
+
+Also, remember to:
+
+- Create your packages and code in the simulation environment as you have been doing throughout the course.
+- Use the consoles to gather information about the status of the simulated robot.
+- Use the IDE to create your files and execute them through the consoles, observing the results on the simulation screen. You can use other consoles to watch calls to topics, services, or action servers.
+- Everything that you create in this unit will be automatically saved in your space. You can come back to this unit at any time and continue with your work from the point where you left off.
+- Every time you need to reset the position of the robot, just press the restart button in the simulation window.
+- Use the debugging tools to try to find what is not working and why (for instance, the Rviz tool is very useful for this purpose).
+
+## What does Summit provide for programming?
+
+#### Sensors
+
+- **Laser sensor**: Summit has a [Hokuyo Laser,](https://en.wikipedia.org/wiki/Inertial_measurement_unit) which provides information about the objects that it detects in its range. The value of the sensor is provided through the topic */hokuyo_base/scan*
+- **Odometry**: The odometry of the robot can be accessed through the */odom* topic
+
+#### Actuators
+
+- **Speed**: You can send speed commands to move the robot through the topic */summit_xl_control/cmd_vel*.
+
+## Steps you should cover
+
+These are the steps that you should follow throughout the duration of the project. These steps will assure you that you have practiced and created all of the structures asked about in the final exam of this course. If you perform all of the steps mentioned here, you will find the exam passable.
+
+- [Step 1: Generate a Map of the environment (Dedicate 2 hours)](https://i-020023c2451ceb591.robotigniteacademy.com/jupyter/notebooks/Course_Project_Nav.ipynb#step1)
+- [Step 2: Make the Robot Localize itself in the Map that you've created (Dedicate 2 hours)](https://i-020023c2451ceb591.robotigniteacademy.com/jupyter/notebooks/Course_Project_Nav.ipynb#step2)
+- [Step 3: Set Up a Path Planning System (Dedicate 3 hours)](https://i-020023c2451ceb591.robotigniteacademy.com/jupyter/notebooks/Course_Project_Nav.ipynb#step3)
+- [Step 4: Create a ROS program that interacts with the Navigation Stack (Dedicate 3 hours)](https://i-020023c2451ceb591.robotigniteacademy.com/jupyter/notebooks/Course_Project_Nav.ipynb#stepExtra)
+
+**NOTE 1**: We do provide the solution for each step. Do not watch unless you are really stuck.
+
+### Step 1: Generate a Map of the Environment
+
+As you've learned in the first 2 chapters of the course, the first thing you need in order to navigate autonomously with a robot is a map of the environment. Where else would this project start? 
+
+Therefore, the first step would not be anything other than creating a map of the environment that we want to navigate. In order to achieve this, we've divided this first step into 7 sub-steps:
+
+- Make sure that the Summit robot is publishing it's transform data correctly.
+- Create a package called **my_summit_mapping** that will contain all of the files related to mapping.
+- Create a **launch file** that will launch the slam_gmapping node and add the necessary parameters in order to properly configure the slam_gmapping node.
+- Launch the slam_gmapping node and create a map of the simulated environment.
+- Save the map that you've just created.
+- Create a script that automatically saves maps.
+- Create a **launch file** that will provide the created map to other nodes.
+
+So, let's start doing them!
+
+**1. Generate the necessary files in order to visualize the frames tree.**
+
+To generate a pdf of the frames tree:
+
+```
+rosrun tf view_frames
+```
+
+Then download the pdf onto your local drive.
+
+You should get a file like this one:
+
+![img](assets/project1_summit_frame_tree.png)
+
+
+
+Create the package, adding **rospy** as the only dependency.
+
+```
+$ cd ~/catkin_ws/src
+$ catkin_create_pkg my_summit_mapping rospy
+```
+
+**3. Create the launch file for the gmapping node.**
+
+In the mapping section (Chapter 2) of this course, you've seen how to create a launch file for the slam_gmapping node. You've also seen some of the most important parameters to set. So, in this step, you'll have to create a launch file for the slam_gmapping node and add the parameters that you think you need to set.
+
+Here you can see a full list of parameters that you can set to configure the slam_gmapping node: <http://docs.ros.org/hydro/api/gmapping/html/>
+
+Here you have an example launch file for the gmapping node:
+
+```xml
+<launch>
+    <node pkg="gmapping" type="slam_gmapping" name="slam_gmapping" output="screen">
+      <!-- simulation remap from="scan" to="/hokuyo_laser_topic"/ -->
+      <!-- real -->
+      <!-- remap from="scan" to="/scan_filtered"/ -->
+      <remap from="scan" to ="/hokuyo_base/scan"/>
+      <!-- param name="map_udpate_interval" value="5.0"/ -->
+      <param name="base_frame" value="base_footprint"/>
+      <param name="odom_frame" value="odom"/>
+      <param name="map_udpate_interval" value="5.0"/>
+      <param name="maxUrange" value="2.0"/>
+      <param name="sigma" value="0.05"/>
+      <param name="kernelSize" value="1"/>
+      <param name="lstep" value="0.05"/>
+      <param name="astep" value="0.05"/>
+      <param name="iterations" value="5"/>
+      <param name="lsigma" value="0.075"/>
+      <param name="ogain" value="3.0"/>
+      <param name="lskip" value="0"/>
+      <param name="srr" value="0.1"/>
+      <param name="srt" value="0.2"/>
+      <param name="str" value="0.1"/>
+      <param name="stt" value="0.2"/>
+      <param name="linearUpdate" value="0.2"/>
+      <param name="angularUpdate" value="0.1"/>
+      <param name="temporalUpdate" value="3.0"/>
+      <param name="resampleThreshold" value="0.5"/>
+      <param name="particles" value="100"/>
+      <param name="xmin" value="-50.0"/>
+      <param name="ymin" value="-50.0"/>
+      <param name="xmax" value="50.0"/>
+      <param name="ymax" value="50.0"/>
+      <param name="delta" value="0.05"/>
+      <param name="llsamplerange" value="0.01"/>
+      <param name="llsamplestep" value="0.01"/>
+      <param name="lasamplerange" value="0.005"/>
+      <param name="lasamplestep" value="0.005"/>
+    </node>
+</launch>
+```
+
+**4. Launch the node using the launch file that you've just created, and create a map of the environment.**
+
+In order to move the robot around the environment, you can use the keyboard teleop. To launch the keyboard teleop, just execute the following command:
+
+```
+roslaunch summit_xl_gazebo keyboard_teleop.launch
+```
+
+Also, remember to launch Rviz and add the proper displays in order to visualize the map you are generating. You should get something like this in RViz:
+
+![img](assets/project1_max_urange_2.png)
+
+Now, start moving the robot around the room to create the map.
+
+What's happening? Are you having difficulty generating a proper map? Is there anything strange in the mapping process? Do you know what could be the reason behind it?
+
+What's happening here is the following: 
+
+- Your maxUrange parameter in the launch file of the slam_gmapping node is set to 2. This parameter sets the maximum range of the laser scanner that is used for map building. Since this is a small value, the robot can't get enough data to know where it is, so it may get lost. This will cause some strange issues during the mapping process, such as the robot readjusting its position incorrectly. 
+- In order to solve it, you should set the maxUrange parameter to some higher value, for instance, 7. This way, the robot will be able to get more data from the environemnt, so that it won't get lost. Now, you'll be able to finalize the mapping process correctly.
+
+Once you modify this parameter and relaunch the slam_gmapping node, you should get something like this in RViz:
+
+![img](assets/project1_max_urange_7.png)
+
+Now, you will be able to map the environment much more easily.
+
+**5. Save the map.**
+
+```
+$ cd catkin_ws/src/my_summit_mapping/maps/
+$ rosrun map_server map_saver -f summit_map
+```
+
+Create a directory in your package named **maps**, and save the map files there. Your map image file should look something similar to this:
+
+![img](assets/project1_fetch_map.png)
+
+**6. Create a launch file that launches the map_server node.**
 
