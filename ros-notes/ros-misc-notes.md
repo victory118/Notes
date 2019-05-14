@@ -28,6 +28,10 @@ If you want to define parameters of a node in a YAML file and then load it throu
 
 This will have the exact same result as if the parameters are loaded directly through the launch file.
 
+### Increase rosserial buffer size
+
+<https://answers.ros.org/question/73627/how-to-increase-rosserial-buffer-size/>
+
 ## Services
 
 ### List all ROS services available
