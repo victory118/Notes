@@ -220,6 +220,32 @@ If we assume that the **odom** and **base_link** frames are the same and static 
 3. <https://answers.ros.org/question/44639/how-to-broadcast-a-transform-between-map-and-odom/>
 4. http://library.isr.ist.utl.pt/docs/roswiki/hector_slam(2f)Tutorials(2f)SettingUpForYourRobot.html
 
+## Find IP addresses connected to network
+
+Install **nmap**,
+
+```
+sudo apt-get install nmap
+```
+
+then
+
+```
+nmap -sP 192.168.1.*
+```
+
+or more comonly
+
+```
+nmap -sn 192.168.1.0/24
+```
+
+will scan the entire .1 to .254 range
+
+This does a simple ping scan in the entire subnet to see which all host's are online.
+
+Note that 192.168.1 is the first part of the main network's IP address, so this may be different depending on the network.
+
 ## Testing Teleop Mode with roscore on Ubuntu laptop and Arduino code on RPi
 
 First export the IP addresses on the Ubuntu laptop and RPi so they can find each other on the ROS server. The Ubuntu laptop will be running roscore. Hence on the RPi, you should declare the ROS master IP address by running:
@@ -270,6 +296,8 @@ BOARD_TAG = mega2560
 ```
 
 If the board is different from the Uno or Mega, you can see all supported boards by running in the command line `make show_boards`.
+
+This GitHub repository provides many example Makefiles and a good description of the process: <https://github.com/sudar/Arduino-Makefile>.
 
 ### Running the fiducials SLAM package
 
@@ -368,7 +396,9 @@ $ . ~/catkin_ws/devel/setup.bash
 ### References
 
 1. http://wiki.ros.org/ROS/Tutorials/catkin/CreatingPackage
-2. 
+2. [http://wiki.ros.org/rosserial_arduino/Tutorials/Time%20and%20TF](http://wiki.ros.org/rosserial_arduino/Tutorials/Time and TF)
+
+
 
 
 
