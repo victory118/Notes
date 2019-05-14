@@ -85,3 +85,6 @@ The tilt angle can be set between -31 and 31 degrees, where -31 degrees is facin
 * <https://www.youtube.com/watch?v=_QpNMJEAkX0> - How to connect Kinect to Raspberry Pi 2 or 3 with ROS
   * <http://roboticsweekends.blogspot.com/2017/12/how-to-connect-kinect-to-raspberry-pi-2.html>
 * <http://wiki.ros.org/kinect_aux>
+* <https://stackoverflow.com/questions/7696436/precision-of-the-kinect-depth-camera>
+* <https://answers.ros.org/question/33091/doubts-about-interpreting-xyz-from-kinect/>
+* 
